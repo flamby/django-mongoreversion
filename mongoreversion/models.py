@@ -214,3 +214,44 @@ class Revision(Document):
 class MongoUserRevision(Revision):
     user_id = ObjectIdField(required=True)
 
+# should probably be in a reversionmixin.py file
+class MongoReversionDocumentMixin(Document):
+    """Use in your documents.py or models.py file as a substitute of the Document class.
+    Allow for instance to retrieve - directly from the template - revisions count like this:
+    {{ doc.count_revisions }}
+    or iterate over revisions like this:
+    {% for rev in doc.revisions %}
+		<li>Revision #{{ forloop.counter }} with comment "{{ rev.comment }}" on {{ rev.timestamp }}</li>
+    {% endfor %}
+    or simply check if the doc's model is versioned :
+    {% if doc.is_versioned %}
+        This document is versioned and has {{ doc.count_revisions }} versions.
+    {% endif %}"""
+
+    # FIXME : Probably ugly code, i'm definitely not a developer. feel free to patch it.
+
+    # TODO:
+    # - implement caching
+    # - try to integrate that into django-admin object details history using django-mongoadmin
+    #   or django-mongonaut, as django-nonrel is deprecated) : useful for a cmdb usage for instance
+    # - check that it works w/ mongoengine_relational w/ the pyramid dependency removed
+    
+    meta = {
+        'abstract': True
+    }
+
+    @property
+    def is_versioned(self):
+        return self._meta.get("versioned", None)
+
+    @property
+    def count_revisions(self):        
+        return self.revisions.count()
+
+    @property
+    def revisions(self):
+        if self.is_versioned:
+            instance_type = ContentType.objects.get(class_name=self._class_name)
+            revisions = Revision.objects.filter(instance_type=instance_type, instance_id=self.pk)
+            return revisions
+        return None
