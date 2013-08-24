@@ -1,7 +1,8 @@
 from django.db import models
 from mongoengine.document import Document
 from mongoengine.fields import DictField, StringField, ReferenceField, IntField, DateTimeField, ListField, ObjectIdField
-from django.contrib.auth.models import User
+#from django.contrib.auth.models import User
+from mongoengine.django.auth import User
 from django.contrib.contenttypes.models import ContentType as DjangoContentType
 from datetime import datetime
 from mongoengine.base import _document_registry
@@ -16,7 +17,7 @@ class ContentType(Document):
         return _document_registry.get(self.class_name, None)
 
 class Revision(Document):
-    user_id = IntField(required=True)
+    user_id = ObjectIdField(required=True)
     timestamp = DateTimeField(default=datetime.now, required=True)
     instance_data = DictField()
     instance_related_revisions = DictField()
@@ -41,6 +42,7 @@ class Revision(Document):
                 related_field_types[key] = related_field_type
         self.related_field_types = related_field_types
 
+    meta = {"allow_inheritance": True}
 
     def __unicode__(self):
         return '<Revision user=%s, time=%s, type=%s, comment=%s, >' % (self.user_id, self.timestamp, self.instance_type, self.comment, )
